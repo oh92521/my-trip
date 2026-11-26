@@ -66,9 +66,13 @@ const loadScript = src => new Promise((ok, fail) => {
   const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => fail(new Error('지도 스크립트를 불러오지 못했어요 (인터넷 연결·키 확인)')); document.head.appendChild(s);
 });
 let kakaoReady, googleReady;
+// 기본 카카오 JavaScript 키. 등록한 도메인(oh92521.github.io)에서만 동작하므로 코드에 넣어도 됨.
+// 설정 화면에서 다른 키를 넣으면 그 키가 우선.
+const DEFAULT_KAKAO_KEY = 'bef60e99dc25df805c833d82dcf60e9c';
 function loadKakao() {
-  if (!settings.kakaoKey) return Promise.reject(new Error('설정(⚙)에서 카카오 JavaScript 키를 입력해 주세요'));
-  kakaoReady ??= loadScript(`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(settings.kakaoKey)}&libraries=services&autoload=false`)
+  const key = settings.kakaoKey || DEFAULT_KAKAO_KEY;
+  if (!key) return Promise.reject(new Error('설정(⚙)에서 카카오 JavaScript 키를 입력해 주세요'));
+  kakaoReady ??= loadScript(`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(key)}&libraries=services&autoload=false`)
     .then(() => new Promise(r => window.kakao.maps.load(r))).catch(e => { kakaoReady = null; throw e; });
   return kakaoReady;
 }
@@ -583,8 +587,8 @@ async function drawPhotos(t, d) {
 function settingsView() {
   $('#title').textContent = '설정';
   $('#view').innerHTML = `<div class="card"><h3 style="margin-top:0">🇰🇷 카카오 (국내 검색·지도)</h3>
-    <label>JavaScript 키</label><input id="sK" value="${esc(settings.kakaoKey)}" autocomplete="off">
-    <div class="note" style="margin-top:8px">developers.kakao.com → 내 애플리케이션 → 앱 키의 <b>JavaScript 키</b>.<br>플랫폼 → Web에 이 앱 주소를 등록해야 동작해요. 카카오맵 사용 설정도 켜 주세요.</div></div>
+    <label>JavaScript 키 (비워 두면 기본 키 사용)</label><input id="sK" value="${esc(settings.kakaoKey === DEFAULT_KAKAO_KEY ? '' : settings.kakaoKey)}" placeholder="기본 키 사용 중" autocomplete="off">
+    <div class="note" style="margin-top:8px">기본 키가 들어 있어서 입력하지 않아도 국내 검색·추천·지도가 동작해요. 다른 키를 쓰고 싶을 때만 넣으세요.</div></div>
     <div class="card"><h3 style="margin-top:0">🌏 Google (해외 검색·지도)</h3>
     <label>API 키</label><input id="sG" value="${esc(settings.googleKey)}" autocomplete="off">
     <div class="note" style="margin-top:8px">console.cloud.google.com → <b>Maps JavaScript API</b>와 <b>Places API (New)</b> 사용 설정 → 사용자 인증 정보에서 API 키 생성.<br>키 제한에서 <b>웹사이트 제한</b>에 이 앱 주소만 넣어 두세요.</div></div>
