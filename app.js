@@ -236,7 +236,21 @@ function tripForm(t) {
     if (v.end < v.start) return alert('끝 날짜가 시작보다 빨라요');
     const destChanged = !t || t.dest !== v.dest || t.region !== v.region;
     let trip;
-    if (t) { Object.assign(t, v); trip = t; } else { trip = norm({ id: uid(), ...v }); trips.push(trip); }
+    if (t) {
+      // 날짜가 바뀌면 일정·기록을 "며칠째" 기준으로 새 날짜에 옮김 (줄어든 날의 일정은 마지막 날로)
+      if (t.start !== v.start || t.end !== v.end) {
+        const od = days(t), nd = days(v), plan = {}, diary = {};
+        const idx = d => Math.min(Math.max(od.indexOf(d), 0), nd.length - 1);
+        Object.keys(t.plan).sort().forEach(d => { if (t.plan[d]?.length) (plan[nd[idx(d)]] ||= []).push(...t.plan[d]); });
+        Object.keys(t.diary).sort().forEach(d => {
+          const e = t.diary[d], k = nd[idx(d)], x = (diary[k] ||= {});
+          if (e.text) x.text = x.text ? x.text + '\n' + e.text : e.text;
+          if (e.photos?.length) x.photos = [...(x.photos || []), ...e.photos];
+        });
+        t.plan = plan; t.diary = diary;
+      }
+      Object.assign(t, v); trip = t;
+    } else { trip = norm({ id: uid(), ...v }); trips.push(trip); }
     if (destChanged) trip.center = null;
     persist(); closeModal();
     if (destChanged && v.dest) locateDest(trip); // 추천 기준 좌표 (실패해도 무시)
@@ -359,10 +373,15 @@ function itemForm(t, day, item, place) {
     const name = $('#iName').value.trim(); if (!name) return alert('장소 이름을 입력해 주세요');
     const nd = $('#iDay').value;
     const v = { ...e, id: item ? e.id : uid(), name, time: $('#iTime').value, memo: $('#iMemo').value.trim() };
-    if (item) t.plan[day] = t.plan[day].filter(x => x !== item);
-    (t.plan[nd] ||= []).push(v);
-    // 시간이 있는 일정은 시간순, 없는 건 뒤로
-    t.plan[nd].sort((a, b) => (a.time || '99') < (b.time || '99') ? -1 : (a.time || '99') > (b.time || '99') ? 1 : 0);
+    if (item && nd === day && v.time === (item.time || '')) {
+      t.plan[day][t.plan[day].indexOf(item)] = v; // 날짜·시간이 그대로면 자리 유지 (끌어서 바꾼 순서 보존)
+    } else {
+      if (item) t.plan[day] = t.plan[day].filter(x => x !== item);
+      const a = (t.plan[nd] ||= []);
+      // 시간이 있으면 더 늦은 일정 바로 앞에, 없으면 맨 뒤에. 다른 일정 순서는 건드리지 않음
+      const at = v.time ? a.findIndex(x => x.time && x.time > v.time) : -1;
+      at < 0 ? a.push(v) : a.splice(at, 0, v);
+    }
     persist(); closeModal(); tab = 'plan'; tripView(t);
   };
   if (item) $('#iDel').onclick = () => { t.plan[day] = t.plan[day].filter(x => x !== item); persist(); closeModal(); tripView(t); };
@@ -580,10 +599,16 @@ function settingsView() {
     settings = { kakaoKey: k, googleKey: g }; save(SKEY, settings);
     if (changed && (kakaoReady || googleReady)) { alert('저장했어요. 바뀐 키를 적용하려고 앱을 새로 고칠게요.'); location.reload(); } else alert('저장했어요');
   };
-  $('#exp').onclick = () => {
+  $('#exp').onclick = async () => {
+    const name = `내여행-백업-${today()}.json`, json = JSON.stringify(trips, null, 1);
+    // 아이폰 홈 화면 앱에서는 파일 다운로드가 잘 안 돼서 공유 시트(파일에 저장)를 먼저 시도
+    try {
+      const file = new File([json], name, { type: 'application/json' });
+      if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file] }); return; }
+    } catch (e) { if (e.name === 'AbortError') return; }
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(trips, null, 1)], { type: 'application/json' }));
-    a.download = `내여행-백업-${today()}.json`; a.click();
+    a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    a.download = name; a.click();
   };
   $('#imp').onclick = () => $('#impFile').click();
   $('#impFile').onchange = async e => {

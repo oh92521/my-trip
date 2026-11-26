@@ -26,7 +26,7 @@ input,select,textarea{width:100%;font-size:16px;padding:10px 12px;border:1px sol
 .seg{display:flex;background:var(--chip);border-radius:12px;padding:3px;gap:3px}
 .seg button{flex:1;border:0;background:none;padding:8px;border-radius:9px;font-size:14px;color:var(--sub);cursor:pointer}
 .seg button.on{background:var(--card);color:var(--text);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.tabs{position:sticky;top:57px;z-index:4;background:var(--bg);padding:4px 0 12px}
+.tabs{position:sticky;top:calc(env(safe-area-inset-top) + 57px);z-index:4;background:var(--bg);padding:4px 0 12px}
 .day-h{display:flex;justify-content:space-between;align-items:center;margin:18px 0 8px}
 .day-h h3{margin:0;font-size:16px}
 .item{display:flex;gap:10px;align-items:flex-start}
@@ -51,7 +51,8 @@ a{color:var(--accent2)}
 .empty{text-align:center;color:var(--sub);padding:40px 0}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 [hidden]{display:none!important}
-.handle{touch-action:none;cursor:grab}
+.handle{touch-action:none;cursor:grab;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.sheet{overscroll-behavior:contain}
 .item.dragging{position:relative;z-index:3;pointer-events:none;background:var(--chip);border-radius:10px;box-shadow:0 6px 16px rgba(0,0,0,.25)}
 .item.drop{box-shadow:0 0 0 2px var(--accent);border-radius:10px}
 .card.drop{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
